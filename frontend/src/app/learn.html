@@ -1,0 +1,57 @@
+<section class="intro">
+  <div>
+    <p class="kicker">INCLUSÃO ECONÔMICA E ACESSO A SERVIÇOS FINANCEIROS</p>
+    <h2>Seu negócio começa<br>com informação.</h2>
+    <p>Aprenda a organizar produtos, conhecer a NCM e entender o que entra no preço. Para quem já tem uma pequena loja ou ainda está planejando começar.</p>
+    <a class="primary-link" href="#consulta">Pesquisar um produto <span aria-hidden="true">↗</span></a>
+  </div>
+  <aside>
+    <span class="lesson-number">01 / PRIMEIROS PASSOS</span>
+    <h3>Não precisa ter CNPJ para aprender.</h3>
+    <p>Experimente uma consulta, entenda os termos e leve suas dúvidas para uma conversa mais segura com a contabilidade.</p>
+    <div class="tags"><span>Gratuito</span><span>Sem cadastro</span><span>No seu ritmo</span></div>
+  </aside>
+</section>
+
+<section class="concepts" aria-label="Conceitos básicos">
+  <article><span>01</span><h3>NCM</h3><p>É o código que classifica uma mercadoria. O material e a finalidade ajudam a encontrar a descrição correta.</p></article>
+  <article><span>02</span><h3>Operação e impostos</h3><p>CFOP identifica a operação. CST ou CSOSN indicam a situação tributária. A regra depende também da UF e do regime da empresa.</p></article>
+  <article><span>03</span><h3>Preço e planejamento</h3><p>O valor da venda precisa considerar compra, taxas, despesas e tributos. Faturamento não é o mesmo que lucro.</p></article>
+</section>
+
+<div class="learning-grid">
+  <section id="consulta" class="learning-panel">
+    <p class="kicker">CONSULTA PARA APRENDER</p><h3>Que produto você quer conhecer?</h3>
+    <p>Busque uma palavra da descrição ou o código. A tabela local mostra correspondências para você conferir.</p>
+    <form (ngSubmit)="search()" class="search-form">
+      <label for="ncm-search">Produto ou NCM</label>
+      <div><input id="ncm-search" name="query" [(ngModel)]="query" placeholder="Ex.: cadernos ou 4820.20.00" minlength="3" required /><button type="submit" [disabled]="loading || !!error">Pesquisar</button></div>
+    </form>
+    <div class="examples"><span>Experimente:</span><button type="button" (click)="example('cadernos')" [disabled]="loading || !!error">Cadernos</button><button type="button" (click)="example('cafe')" [disabled]="loading || !!error">Café</button><button type="button" (click)="example('48202000')" [disabled]="loading || !!error">4820.20.00</button></div>
+    @if (loading) { <p role="status">Carregando a tabela local…</p> }
+    @if (error) { <p role="alert">{{ error }} <button type="button" (click)="load()">Tentar novamente</button></p> }
+    <div aria-live="polite">
+      @if (searched && !results.length) { <p class="search-note">Nenhuma correspondência. Use outra palavra da descrição ou confira o código no Classif.</p> }
+      @for (item of results; track item.Codigo) { <article class="ncm-result"><strong>{{ item.Codigo }}</strong><p>{{ item.Descricao }}</p></article> }
+    </div>
+    <p class="source">Base local: {{ source || 'carregando' }}. A cópia não é atualizada automaticamente.</p>
+    <p class="search-note">A NCM, sozinha, não define a alíquota. Confira as características do produto e a regra aplicável à sua operação.</p>
+    <a href="https://portalunico.siscomex.gov.br/classif/" target="_blank" rel="noopener">Conferir na consulta oficial Classif ↗</a>
+  </section>
+
+  <section class="learning-panel checklist">
+    <p class="kicker">DA PESQUISA AO CADASTRO</p><h3>Seu próximo passo</h3>
+    <p>Use este roteiro durante a orientação. Você pode baixar suas anotações ao terminar.</p>
+    <p class="progress-label">{{ progress }} de 4 passos conferidos</p><progress [value]="progress" max="4" aria-label="Passos conferidos"></progress>
+    @for (step of steps; track $index) { <label><input type="checkbox" [(ngModel)]="checked[$index]" /> <span>{{ step }}</span></label> }
+    <button type="button" class="download" (click)="download()">Baixar meu roteiro ↓</button>
+    <p class="source">As marcações ficam nesta sessão. O arquivo baixado guarda o roteiro e a consulta.</p>
+  </section>
+</div>
+
+<section class="quiz learning-panel">
+  <div><p class="kicker">PAUSA PARA PRATICAR</p><h3>Vendi por R$ 50. Lucrei R$ 50?</h3><p>Escolha uma resposta e veja a explicação.</p></div>
+  <div class="quiz-options"><button type="button" (click)="answer = 0" [attr.aria-pressed]="answer === 0">Sim, todo o valor é lucro.</button><button type="button" (click)="answer = 1" [attr.aria-pressed]="answer === 1">Depende dos custos e das despesas.</button>
+  @if (answer !== null) { <p role="status" class="quiz-feedback">{{ answer === 1 ? 'Isso mesmo!' : 'Quase! Pense no que foi gasto.' }} Se a compra custou R$ 30 e as outras despesas somaram R$ 8, sobram R$ 12. Este é apenas um exemplo para aprender a separar receita e resultado.</p> }</div>
+</section>
+<footer>Projeto de extensão em Engenharia de Software · Francisco Maxwell Fernandes Silva<br>Ferramenta educativa de apoio ao pequeno empreendedor. As notas geradas pelo sistema são demonstrações locais.</footer>

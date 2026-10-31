@@ -1,0 +1,29 @@
+services:
+  estoque-service:
+    build:
+      context: ./backend/estoque-service
+    environment:
+      PORT: "8081"
+      ESTOQUE_DB: /data/estoque.db
+    ports:
+      - "8081:8081"
+    volumes:
+      - estoque-data:/data
+
+  faturamento-service:
+    build:
+      context: ./backend/faturamento-service
+    environment:
+      PORT: "8082"
+      FATURAMENTO_DB: /data/faturamento.db
+      ESTOQUE_URL: http://estoque-service:8081
+    ports:
+      - "8082:8082"
+    volumes:
+      - faturamento-data:/data
+    depends_on:
+      - estoque-service
+
+volumes:
+  estoque-data:
+  faturamento-data:

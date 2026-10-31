@@ -1,0 +1,27 @@
+# Dependencies
+frontend/node_modules/
+
+# Build outputs
+frontend/dist/
+frontend/.angular/
+/backend/estoque-service/estoque-service
+/backend/faturamento-service/faturamento-service
+backend/**/*.exe
+
+# Local databases and runtime data
+*.db
+*.db-shm
+*.db-wal
+/data/
+
+# Logs and temporary files
+*.log
+tmp/
+temp/
+.DS_Store
+Thumbs.db
+
+# Local editor files
+.idea/
+.vscode/*
+!frontend/.vscode/extensions.json

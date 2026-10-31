@@ -1,0 +1,47 @@
+:host { display: block; color: #183a37; }
+h2,h3,p { margin: 0; }
+a { color: #075e54; text-underline-offset: 4px; }
+.kicker { font-size: 11px; letter-spacing: 1.4px; font-weight: 800; color: #47736c; margin-bottom: 14px; }
+.intro { display: grid; grid-template-columns: 1.45fr 1fr; gap: 64px; padding: 38px 0 44px; align-items: center; }
+.intro h2 { font-size: clamp(32px,4.6vw,58px); line-height: 1.06; letter-spacing: -2px; font-weight: 700; margin-bottom: 22px; }
+.intro p:not(.kicker) { max-width: 560px; line-height: 1.65; color: #47635e; }
+.primary-link { display: inline-flex; gap: 35px; margin-top: 26px; background: #12685a; color: white; border-radius: 9px; padding: 15px 20px; text-decoration: none; font-weight: 700; }
+.intro aside { padding: 32px; background: #e1eee5; border-radius: 20px; border: 1px solid #cfdfd4; }
+.lesson-number { font-size: 11px; font-weight: 800; letter-spacing: 1.2px; }
+.intro aside h3 { font-size: 27px; line-height: 1.2; margin: 36px 0 18px; }
+.tags { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 24px; }
+.tags span { padding: 6px 10px; font-size: 11px; border: 1px solid #bbd1c4; border-radius: 20px; }
+.concepts { display: grid; grid-template-columns: repeat(3,1fr); border-block: 1px solid #d5ded6; padding: 25px 0; gap: 32px; margin-bottom: 34px; }
+.concepts article > span { color: #66857c; font-size: 12px; }
+.concepts h3 { margin: 10px 0; font-size: 18px; }
+.concepts p,.learning-panel > p:not(.kicker),.quiz p { font-size: 14px; line-height: 1.65; color: #50665f; }
+.learning-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 24px; }
+.learning-panel { background: #fff; border: 1px solid #dce4dc; border-radius: 16px; padding: 28px; min-width: 0; }
+.learning-panel h3 { font-size: 23px; margin-bottom: 12px; letter-spacing: -.5px; }
+.search-form { margin-top: 24px; }
+.search-form label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+.search-form > div { display: flex; gap: 8px; }
+input:not([type=checkbox]) { min-width: 0; flex: 1; width: 100%; padding: 13px; border: 1px solid #a6beb4; border-radius: 7px; color: #173d35; background: #fff; }
+button { cursor: pointer; font: inherit; border: 1px solid #c3d5cc; border-radius: 7px; padding: 12px 16px; background: #12685a; color: #fff; }
+button:disabled { opacity: .5; cursor: wait; }
+button:hover:not(:disabled),.primary-link:hover { filter: brightness(.93); }
+button:focus-visible,a:focus-visible,input:focus-visible { outline: 3px solid #e5aa37; outline-offset: 3px; }
+.examples { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 12px 0 20px; font-size: 12px; color: #597067; }
+.examples button { background: #edf5ee; color: #20594b; padding: 7px 10px; }
+.ncm-result { padding: 14px 0; border-top: 1px solid #e1e8e2; display: grid; grid-template-columns: 105px 1fr; gap: 12px; font-size: 14px; line-height: 1.5; }
+.ncm-result strong { color: #15634e; }
+.source { font-size: 11px !important; line-height: 1.6; color: #657b70; margin-top: 20px; overflow-wrap: anywhere; }
+.search-note { margin: 16px 0; }
+.checklist label { display: flex; align-items: flex-start; gap: 12px; line-height: 1.5; font-size: 14px; padding: 16px 0; border-bottom: 1px solid #e0e8df; cursor: pointer; }
+.checklist input { width: 18px; height: 18px; flex: 0 0 18px; accent-color: #176b56; }
+.progress-label { margin-top: 22px; font-weight: 700; }
+progress { width: 100%; height: 7px; accent-color: #176b56; }
+.download { margin-top: 24px; width: 100%; }
+.quiz { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 24px; background: #f0f0e4; }
+.quiz-options { display: grid; gap: 10px; }
+.quiz-options button { background: #fff; color: #234e40; text-align: left; }
+.quiz-options button[aria-pressed=true] { border: 2px solid #12685a; }
+.quiz-feedback { padding-top: 8px; }
+footer { text-align: center; font-size: 12px; line-height: 1.8; color: #65776d; padding: 36px 0 6px; }
+@media(max-width:800px) { .intro { gap: 24px; padding-top: 20px; } .intro aside { padding: 24px; } .learning-grid { grid-template-columns: 1fr; } }
+@media(max-width:580px) { .intro,.concepts,.quiz { grid-template-columns: 1fr; gap: 24px; } .intro h2 { letter-spacing: -1px; } .intro aside h3 { margin-top: 20px; } .learning-panel { padding: 20px; } .search-form > div { flex-direction: column; } .ncm-result { grid-template-columns: 1fr; gap: 5px; } }

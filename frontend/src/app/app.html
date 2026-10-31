@@ -1,0 +1,831 @@
+<main class="shell">
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">EDUCAÇÃO PARA EMPREENDER</p>
+      <h1>Tributo em Foco</h1>
+      <small>Cadastro, custos e informação para pequenos negócios</small>
+    </div>
+
+    @if (activeTab === 'learn') { <span class="learning-label">Aprender para empreender</span> }
+    @if (activeTab !== 'learn') { <div class="service-actions">
+      <span class="status-dot" [class.offline]="!!systemFault"></span>
+      <span>{{ systemFault ? 'Falha detectada' : 'Servicos prontos' }}</span>
+      <button class="ghost" type="button" (click)="checkSystemFaults()" [disabled]="diagnosingFailure">
+        {{ diagnosingFailure ? 'Verificando...' : 'Diagnosticar' }}
+      </button>
+      @if (systemFault?.recoverable) {
+        <button class="ghost danger" type="button" (click)="fixSystemFault()" [disabled]="healingFailure">
+          {{ healingFailure ? 'Corrigindo...' : 'Corrigir' }}
+        </button>
+      }
+      <button class="icon-button" type="button" (click)="loadData()" title="Atualizar dados">
+        <span aria-hidden="true">↻</span>
+      </button>
+    </div> }
+  </header>
+
+  @if (alert && activeTab !== 'learn') {
+    <section class="alert" [class.error]="alert.type === 'error'" [class.success]="alert.type === 'success'">
+      @if (alert.type === 'error') {
+        <pre>{{ alert.text }}</pre>
+      } @else {
+        {{ alert.text }}
+      }
+    </section>
+  }
+
+  @if (systemFault && activeTab !== 'learn') {
+    <section class="fault-card">
+      <div>
+        <span>{{ systemFault.code }}</span>
+        <strong>{{ systemFault.phrase }}</strong>
+      </div>
+      <p>{{ systemFault.service }} | {{ systemFault.file }} | {{ systemFault.location }} | {{ systemFault.path }}</p>
+      @if (systemFault.recoverable) {
+        <button class="secondary" type="button" (click)="fixSystemFault()" [disabled]="healingFailure">Corrigir automaticamente</button>
+      }
+    </section>
+  }
+
+  <nav class="tabs" aria-label="Módulos">
+    <button type="button" [class.active]="activeTab === 'learn'" (click)="activeTab = 'learn'">Aprender</button>
+    <button type="button" [class.active]="activeTab === 'products'" (click)="activeTab = 'products'">Produtos</button>
+    <button type="button" [class.active]="activeTab === 'invoices'" (click)="activeTab = 'invoices'">Notas fiscais</button>
+    <button type="button" [class.active]="activeTab === 'pricing'" (click)="activeTab = 'pricing'">Precificação</button>
+    <button type="button" [class.active]="activeTab === 'accounting'" (click)="activeTab = 'accounting'">Contabilidade</button>
+  </nav>
+
+  @if (activeTab === 'learn') { <app-learn /> }
+  @if (activeTab !== 'learn') { <p class="education-note">Ambiente educativo · Alíquotas são estimativas de demonstração. Confira as regras com a contabilidade. Notas e XML sem validade fiscal.</p> }
+
+  @if (activeTab === 'products') {
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Servico de Estoque</p>
+          <h2>Produtos e classificacao fiscal</h2>
+        </div>
+        <button class="primary" type="button" (click)="openNewProduct()">Novo produto</button>
+      </div>
+
+      <div class="metric-grid">
+        <div>
+          <span>Itens no estoque</span>
+          <strong>{{ inventoryTotalQuantity() }}</strong>
+        </div>
+        <div>
+          <span>Patrimonio por compra</span>
+          <strong>{{ inventoryPurchaseValue() | currency:'BRL':'symbol':'1.2-2' }}</strong>
+        </div>
+        <div>
+          <span>Patrimonio por venda</span>
+          <strong>{{ inventorySaleValue() | currency:'BRL':'symbol':'1.2-2' }}</strong>
+        </div>
+        <div>
+          <span>Lucro potencial estoque</span>
+          <strong>{{ inventoryEstimatedProfit() | currency:'BRL':'symbol':'1.2-2' }}</strong>
+        </div>
+        <div>
+          <span>Caixa recebido</span>
+          <strong>{{ cashValue() | currency:'BRL':'symbol':'1.2-2' }}</strong>
+        </div>
+        <div [class.metric-warning]="productsMissingNcm() > 0">
+          <span>Produtos sem NCM</span>
+          <strong>{{ productsMissingNcm() }}</strong>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Codigo</th>
+              <th>Produto</th>
+              <th>NCM</th>
+              <th>CFOP</th>
+              <th>CSOSN</th>
+              <th class="number">Quantidade</th>
+              <th class="number">Compra</th>
+              <th class="number">Venda</th>
+              <th class="number">Tributo</th>
+              <th>Status</th>
+              <th class="actions">Acoes</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (product of products; track trackProduct($index, product)) {
+              <tr>
+                <td>
+                  <div class="product-code">
+                    @if (product.photoDataUrl) {
+                      <img [src]="product.photoDataUrl" alt="Foto do produto" />
+                    } @else {
+                      <span class="photo-placeholder"></span>
+                    }
+                    <strong>{{ product.code }}</strong>
+                  </div>
+                </td>
+                <td>
+                  <strong>{{ product.description }}</strong>
+                  <small>{{ product.packagingDescription || product.taxProfile }}</small>
+                </td>
+                <td>
+                  @if (hasValidProductNcm(product)) {
+                    {{ product.ncm }}
+                  } @else {
+                    <span class="status-text danger">Sem NCM</span>
+                  }
+                </td>
+                <td>{{ product.cfop || '-' }}</td>
+                <td>{{ product.csosn || '-' }}</td>
+                <td class="number">{{ product.balance }}</td>
+                <td class="number">{{ product.purchasePrice | currency:'BRL':'symbol':'1.2-2' }}</td>
+                <td class="number">{{ product.salePrice | currency:'BRL':'symbol':'1.2-2' }}</td>
+                <td class="number">{{ product.taxRate | number:'1.2-2' }}%</td>
+                <td>
+                  <span class="badge" [class.closed]="!product.active">{{ product.active ? 'Ativo' : 'Inativo' }}</span>
+                </td>
+                <td class="actions">
+                  <div class="action-menu">
+                    <button class="kebab" type="button" title="Acoes do produto">&#8942;</button>
+                    <div class="menu-panel">
+                      <button type="button" (click)="editProduct(product)">Editar cadastro</button>
+                      <button type="button" (click)="adjustProductStock(product)">Adicionar/ajustar estoque</button>
+                      <button type="button" (click)="deleteProduct(product)">Excluir produto</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="11" class="empty">Nenhum produto cadastrado.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+
+  @if (activeTab === 'invoices') {
+    <section class="workspace">
+      <div class="panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Cadastro de NF</p>
+            <h2>Nova nota fiscal</h2>
+          </div>
+        </div>
+
+        <details class="optional-box">
+          <summary>Cliente e contabilidade opcionais</summary>
+          <form class="customer-grid">
+            <label>
+              <span class="field-title">Cliente <span class="help" title="Opcional. Use Consumidor final quando nao quiser identificar o cliente.">?</span></span>
+              <input name="customerName" [(ngModel)]="invoiceForm.customerName" />
+            </label>
+            <label>
+              <span class="field-title">CPF/CNPJ opcional <span class="help" title="Pode ficar vazio. Informe apenas se a venda precisar identificar o comprador.">?</span></span>
+              <input name="customerDocument" [(ngModel)]="invoiceForm.customerDocument" />
+            </label>
+            <label>
+              <span class="field-title">Email cliente opcional <span class="help" title="Nao envia email real. Fica salvo no registro local da NF.">?</span></span>
+              <input name="customerEmail" [(ngModel)]="invoiceForm.customerEmail" />
+            </label>
+            <label>
+              <span class="field-title">UF cliente <span class="help" title="Usada para sugerir CFOP 5102 dentro do estado ou 6102 fora do estado.">?</span></span>
+              <select name="customerState" [(ngModel)]="invoiceForm.customerState" (change)="onStateChange()">
+                @for (state of states; track state) {
+                  <option [value]="state">{{ state }}</option>
+                }
+              </select>
+            </label>
+            <label>
+              <span class="field-title">Email contabilidade <span class="help" title="Usado para gerar o rascunho .eml local junto com o XML.">?</span></span>
+              <input name="accountingEmail" [(ngModel)]="invoiceForm.accountingEmail" />
+            </label>
+            <button class="secondary" type="button" (click)="detectStateFromCurrentText()">Detectar UF pelo texto</button>
+          </form>
+        </details>
+
+        <form class="payment-grid">
+          <label>
+            <span class="field-title">Forma pagamento * <span class="help" title="Obrigatorio. Define como a NF foi paga ou sera paga.">?</span></span>
+            <select name="paymentMethod" [(ngModel)]="invoiceForm.paymentMethod">
+              @for (method of paymentMethods; track method) {
+                <option [value]="method">{{ method }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span class="field-title">Status pagamento <span class="help" title="Use Parcial quando o valor recebido for menor que o total. O sistema calcula falta/troco abaixo.">?</span></span>
+            <select name="paymentStatus" [(ngModel)]="invoiceForm.paymentStatus">
+              @for (status of paymentStatuses; track status) {
+                <option [value]="status">{{ status }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span class="field-title">Valor recebido * <span class="help" title="Obrigatorio. Se passar do total, vira troco; se faltar, mostra quanto o cliente fica devendo.">?</span></span>
+            <input name="amountPaid" inputmode="decimal" placeholder="R$ 0,00" [(ngModel)]="invoiceForm.amountPaid" (blur)="onInvoiceMoneyBlur('amountPaid')" />
+          </label>
+          <label>
+            <span class="field-title">Vencimento <span class="help" title="Opcional. Use para boleto, fiado ou pagamento futuro.">?</span></span>
+            <input name="dueDate" type="date" [(ngModel)]="invoiceForm.dueDate" />
+          </label>
+        </form>
+
+        <form class="invoice-builder" (ngSubmit)="addInvoiceItem()">
+          <label>
+            <span class="field-title">Produto <span class="help" title="Lista apenas produtos cadastrados no estoque.">?</span></span>
+            <select name="productCode" [(ngModel)]="itemForm.productCode" (ngModelChange)="syncItemFromProduct()" required>
+              @for (product of products; track trackProduct($index, product)) {
+                <option [value]="product.code">{{ product.code }} - {{ product.description }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span class="field-title">Quantidade <span class="help" title="Nao pode passar da quantidade disponivel no estoque.">?</span></span>
+            <input name="quantity" type="number" min="1" [(ngModel)]="itemForm.quantity" required />
+          </label>
+          <label>
+            <span class="field-title">Valor unitario <span class="help" title="Vem do valor de venda do produto, mas pode ser ajustado para esta NF.">?</span></span>
+            <input name="unitValue" inputmode="decimal" placeholder="R$ 0,00" [(ngModel)]="itemForm.unitValue" (blur)="onItemMoneyBlur('unitValue')" />
+          </label>
+          <button class="secondary" type="submit" [disabled]="products.length === 0">Adicionar</button>
+        </form>
+
+        @if (selectedProduct()) {
+          <div class="product-hint">
+            <span>NCM {{ selectedProduct()?.ncm || '-' }}</span>
+            <span>Tributo {{ selectedProduct()?.taxRate | number:'1.2-2' }}%</span>
+            <span>Quantidade {{ selectedProduct()?.balance }}</span>
+          </div>
+        }
+
+        <div class="draft">
+          <div class="draft-heading">
+            <strong>Itens da NF</strong>
+            <span>{{ invoiceItems.length }} item(ns)</span>
+          </div>
+          @for (item of invoiceItems; track trackInvoiceItem($index, item)) {
+            <div class="draft-item">
+              <span>{{ item.productCode }} - {{ item.description }} | NCM {{ item.ncm }} | {{ item.quantity }} x {{ item.unitValue | currency:'BRL':'symbol':'1.2-2' }}</span>
+              <strong>{{ item.totalValue | currency:'BRL':'symbol':'1.2-2' }}</strong>
+              <button class="icon-button" type="button" title="Remover item" (click)="removeInvoiceItem(item.productCode)">x</button>
+            </div>
+          } @empty {
+            <p class="empty">A NF ainda nao possui produtos.</p>
+          }
+        </div>
+
+        <div class="summary-line">
+          <span>Total produtos: <strong>{{ draftTotal() | currency:'BRL':'symbol':'1.2-2' }}</strong></span>
+          <span>Tributos estimados: <strong>{{ draftTax() | currency:'BRL':'symbol':'1.2-2' }}</strong></span>
+          <span>Pagamento: <strong>{{ paymentLabel() }}</strong></span>
+        </div>
+
+        <button class="primary full" type="button" (click)="createInvoice()" [disabled]="savingInvoice || invoiceItems.length === 0">
+          {{ savingInvoice ? 'Criando NF...' : 'Criar NF aberta' }}
+        </button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Filtros</p>
+            <h2>Notas fiscais</h2>
+          </div>
+          @if (loading) {
+            <span class="muted">Carregando...</span>
+          }
+        </div>
+
+        <div class="filters">
+          <label>
+            <span class="field-title">Ano <span class="help" title="O ano inicial vem automaticamente do ano atual.">?</span></span>
+            <select name="filterYear" [(ngModel)]="filterYear" (change)="loadData()">
+              @for (year of years; track year) {
+                <option [value]="year">{{ year }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span class="field-title">Mes <span class="help" title="Filtra as notas por mes de emissao local.">?</span></span>
+            <select name="filterMonth" [(ngModel)]="filterMonth" (change)="loadData()">
+              @for (month of months; track month.value) {
+                <option [value]="month.value">{{ month.label }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span class="field-title">Status <span class="help" title="Use para localizar notas abertas, autorizadas, em contingencia, enviadas, canceladas ou inutilizadas.">?</span></span>
+            <select name="filterStatus" [(ngModel)]="filterStatus" (change)="loadData()">
+              @for (status of statuses; track status) {
+                <option [value]="status">{{ status }}</option>
+              }
+            </select>
+          </label>
+        </div>
+
+        <div class="invoice-list">
+          @for (invoice of invoices; track trackInvoice($index, invoice)) {
+            <article class="invoice-row">
+              <div>
+                <strong>NF #{{ invoice.number }}</strong>
+                <small>{{ invoice.customerName }}{{ invoice.customerState ? ' / ' + invoice.customerState : '' }} | {{ invoice.issueMonth }}/{{ invoice.issueYear }} | {{ invoice.paymentMethod }} - {{ invoice.paymentStatus }}</small>
+              </div>
+              <span class="badge" [class]="statusClass(invoice.status)">{{ invoice.status }}</span>
+              <span class="number">{{ invoice.totalSale | currency:'BRL':'symbol':'1.2-2' }}</span>
+              <div class="row-actions">
+                <button class="view-button" type="button" (click)="viewInvoice(invoice)">Abrir</button>
+                <div class="action-menu">
+                  <button class="kebab" type="button" title="Acoes da nota">&#8942;</button>
+                  <div class="menu-panel right">
+                    <button type="button" (click)="issueInvoice(invoice)" [disabled]="invoice.status !== 'Aberta' || processingInvoiceId === invoice.id">Autorizar / emitir</button>
+                    <button type="button" (click)="markContingency(invoice)" [disabled]="invoice.status !== 'Aberta' && invoice.status !== 'Autorizada'">Contingencia</button>
+                    <button type="button" (click)="sendAccounting(invoice)" [disabled]="invoice.status !== 'Autorizada' && invoice.status !== 'Contingencia' && invoice.status !== 'EnviadaContabilidade'">Enviar contabilidade</button>
+                    <button type="button" (click)="downloadXml(invoice)" [disabled]="invoice.status === 'Aberta'">Baixar XML</button>
+                    <button type="button" (click)="cancelInvoice(invoice)" [disabled]="invoice.status === 'Cancelada' || invoice.status === 'Inutilizada' || invoice.status === 'EnviadaContabilidade'">Cancelar</button>
+                    <button type="button" (click)="voidInvoice(invoice)" [disabled]="invoice.status !== 'Aberta' && invoice.status !== 'Cancelada'">Inutilizar numeracao</button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          } @empty {
+            <p class="empty">Nenhuma NF encontrada para o filtro.</p>
+          }
+        </div>
+      </div>
+    </section>
+  }
+
+  @if (activeTab === 'pricing') {
+    <section class="workspace pricing-workspace">
+      <div class="panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Precificação inteligente</p>
+            <h2>Canais de venda</h2>
+          </div>
+          <div class="row-actions">
+            <button class="secondary" type="button" (click)="addPricingChannel('physical')">+ Fisica</button>
+            <button class="secondary" type="button" (click)="addPricingChannel('online')">+ Virtual</button>
+          </div>
+        </div>
+
+        <div class="channel-list">
+          @for (channel of pricingChannels; track channel.id) {
+            <button type="button" [class.active]="selectedPricingChannelId === channel.id" (click)="selectedPricingChannelId = channel.id">
+              <strong>{{ channel.name }}</strong>
+              <small>{{ channel.type === 'physical' ? 'Loja fisica' : 'Loja virtual' }}</small>
+            </button>
+          }
+        </div>
+
+        <form class="settings-form pricing-form">
+          <label>
+            <span class="field-title">Nome do canal <span class="help" title="Exemplo: Balcao, Instagram, Mercado Livre, Shopify ou WhatsApp.">?</span></span>
+            <input name="pricingChannelName" [ngModel]="selectedPricingChannel().name" (ngModelChange)="updateSelectedPricingChannel('name', $event)" />
+          </label>
+          <label>
+            <span class="field-title">Tipo <span class="help" title="Loja fisica usa menos taxas digitais; loja virtual considera gateway, marketplace, embalagem e trafego.">?</span></span>
+            <select name="pricingChannelType" [ngModel]="selectedPricingChannel().type" (ngModelChange)="updateSelectedPricingChannel('type', $event)">
+              <option value="physical">Loja fisica</option>
+              <option value="online">Loja virtual</option>
+            </select>
+          </label>
+          <label>
+            <span class="field-title">Taxa pagamento % <span class="help" title="Percentual cobrado por maquininha, gateway, intermediador ou cartao.">?</span></span>
+            <input name="paymentFeePercent" type="number" min="0" step="0.01" [ngModel]="selectedPricingChannel().paymentFeePercent" (ngModelChange)="updateSelectedPricingChannel('paymentFeePercent', $event)" />
+          </label>
+          <label>
+            <span class="field-title">Taxa fixa pagamento <span class="help" title="Valor fixo cobrado por venda, alem do percentual.">?</span></span>
+            <input name="paymentFeeFixed" inputmode="decimal" [ngModel]="selectedPricingChannel().paymentFeeFixed" (ngModelChange)="updateSelectedPricingChannel('paymentFeeFixed', $event)" />
+          </label>
+          <label>
+            <span class="field-title">Marketplace % <span class="help" title="Comissao percentual de marketplace ou plataforma. Use 0 para loja fisica.">?</span></span>
+            <input name="marketplaceFeePercent" type="number" min="0" step="0.01" [ngModel]="selectedPricingChannel().marketplaceFeePercent" (ngModelChange)="updateSelectedPricingChannel('marketplaceFeePercent', $event)" />
+          </label>
+          <label>
+            <span class="field-title">Custo fixo % <span class="help" title="Estimativa para aluguel, energia, funcionario, embalagem geral ou custo operacional rateado.">?</span></span>
+            <input name="fixedCostPercent" type="number" min="0" step="0.01" [ngModel]="selectedPricingChannel().fixedCostPercent" (ngModelChange)="updateSelectedPricingChannel('fixedCostPercent', $event)" />
+          </label>
+          <label>
+            <span class="field-title">Trafego por venda <span class="help" title="Custo estimado de anuncio para gerar uma venda. Em loja fisica pode ficar 0.">?</span></span>
+            <input name="trafficCost" inputmode="decimal" [ngModel]="selectedPricingChannel().trafficCost" (ngModelChange)="updateSelectedPricingChannel('trafficCost', $event)" />
+          </label>
+          <label>
+            <span class="field-title">Embalagem <span class="help" title="Soma caixa, etiqueta, plastico, protecao e outros materiais por unidade.">?</span></span>
+            <input name="packagingCost" inputmode="decimal" [ngModel]="selectedPricingChannel().packagingCost" (ngModelChange)="updateSelectedPricingChannel('packagingCost', $event)" />
+          </label>
+          <label>
+            <span class="field-title">Margem alvo % <span class="help" title="Lucro liquido desejado sobre o preco final depois de custos, taxas e impostos.">?</span></span>
+            <input name="targetMarginPercent" type="number" min="0" step="0.01" [ngModel]="selectedPricingChannel().targetMarginPercent" (ngModelChange)="updateSelectedPricingChannel('targetMarginPercent', $event)" />
+          </label>
+          <button class="ghost danger full" type="button" (click)="removePricingChannel(selectedPricingChannel())">Excluir canal</button>
+        </form>
+      </div>
+
+      <div class="panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Produto e impostos</p>
+            <h2>Calculo de preco</h2>
+          </div>
+        </div>
+
+        <form class="payment-grid pricing-inputs">
+          <label>
+            <span class="field-title">Produto <span class="help" title="Escolha um produto para puxar custo, venda, NCM e imposto do estoque.">?</span></span>
+            <select name="pricingProductCode" [(ngModel)]="pricingProductCode" (ngModelChange)="syncPricingFromProduct()">
+              @for (product of products; track trackProduct($index, product)) {
+                <option [value]="product.code">{{ product.code }} - {{ product.description }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span class="field-title">Custo compra <span class="help" title="Vem do cadastro do produto. Pode ser ajustado para simular outro fornecedor.">?</span></span>
+            <input name="pricingProductCost" inputmode="decimal" [(ngModel)]="pricingForm.productCost" />
+          </label>
+          <label>
+            <span class="field-title">Frete/entrada <span class="help" title="Frete de compra, taxa de entrada, embalagem do fornecedor ou custo adicional antes da venda.">?</span></span>
+            <input name="pricingSupplierFreight" inputmode="decimal" [(ngModel)]="pricingForm.supplierFreight" />
+          </label>
+          <label>
+            <span class="field-title">Venda atual <span class="help" title="Preco que voce pretende cobrar. O sistema compara com o preco de empate e sugerido.">?</span></span>
+            <input name="pricingSalePrice" inputmode="decimal" [(ngModel)]="pricingForm.salePrice" />
+          </label>
+          <label>
+            <span class="field-title">Imposto produto % <span class="help" title="Vem da classificacao fiscal do produto. E uma estimativa local, nao uma apuracao fiscal oficial.">?</span></span>
+            <input name="pricingTaxRate" type="number" min="0" step="0.01" [(ngModel)]="pricingForm.taxRatePercent" />
+          </label>
+        </form>
+
+        @if (selectedPricingProduct()) {
+          <div class="product-hint">
+            <span>NCM {{ selectedPricingProduct()?.ncm }}</span>
+            <span>UF {{ certificateForm.companyState }}</span>
+            <span>{{ certificateForm.taxRegime }}</span>
+            <span>Estoque {{ selectedPricingProduct()?.balance }}</span>
+          </div>
+        }
+
+        <div class="pricing-summary" [class]="pricingResult().tone">
+          <div>
+            <span>Status</span>
+            <strong>{{ pricingResult().status }}</strong>
+            <small>{{ pricingResult().advice }}</small>
+          </div>
+          <div>
+            <span>Preco sugerido</span>
+            <strong>{{ pricingResult().suggestedPrice | currency:'BRL':'symbol':'1.2-2' }}</strong>
+          </div>
+          <div>
+            <span>Lucro estimado</span>
+            <strong>{{ pricingResult().netProfit | currency:'BRL':'symbol':'1.2-2' }}</strong>
+          </div>
+          <div>
+            <span>Prejuizo estimado</span>
+            <strong>{{ pricingResult().loss | currency:'BRL':'symbol':'1.2-2' }}</strong>
+          </div>
+        </div>
+
+        <div class="breakdown-grid">
+          <div><span>Custo produto</span><strong>{{ pricingResult().productCost | currency:'BRL':'symbol':'1.2-2' }}</strong></div>
+          <div><span>Impostos</span><strong>{{ pricingResult().taxValue | currency:'BRL':'symbol':'1.2-2' }}</strong></div>
+          <div><span>Pagamento</span><strong>{{ pricingResult().paymentFee | currency:'BRL':'symbol':'1.2-2' }}</strong></div>
+          <div><span>Marketplace</span><strong>{{ pricingResult().marketplaceFee | currency:'BRL':'symbol':'1.2-2' }}</strong></div>
+          <div><span>Custo fixo</span><strong>{{ pricingResult().fixedCost | currency:'BRL':'symbol':'1.2-2' }}</strong></div>
+          <div><span>Custo canal</span><strong>{{ pricingResult().channelCost | currency:'BRL':'symbol':'1.2-2' }}</strong></div>
+          <div><span>Custo total</span><strong>{{ pricingResult().totalCost | currency:'BRL':'symbol':'1.2-2' }}</strong></div>
+          <div><span>Empate</span><strong>{{ pricingResult().breakEvenPrice | currency:'BRL':'symbol':'1.2-2' }}</strong></div>
+          <div><span>Margem liquida</span><strong>{{ pricingResult().netMargin | number:'1.2-2' }}%</strong></div>
+          <div><span>Markup</span><strong>{{ pricingResult().markup | number:'1.2-2' }}%</strong></div>
+        </div>
+      </div>
+    </section>
+  }
+
+  @if (activeTab === 'accounting') {
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Remessa local</p>
+          <h2>XML para contabilidade</h2>
+        </div>
+      </div>
+
+      @if (accountingResult) {
+        <div class="accounting-grid">
+          <div>
+            <h3>
+              @if (accountingResult.invoice) {
+                NF #{{ accountingResult.invoice.number }}
+              } @else {
+                Remessa {{ accountingResult.periodMonth || 'ano' }}/{{ accountingResult.periodYear }}
+              }
+            </h3>
+            <p>{{ accountingResult.message }}</p>
+            @if (accountingResult.invoice) {
+              <button class="primary" type="button" (click)="downloadXml(accountingResult.invoice)">Baixar XML</button>
+            } @else {
+              <button class="primary" type="button" (click)="downloadAccountingXml()">Baixar XML</button>
+            }
+            <button class="secondary" type="button" (click)="downloadEmailDraft()">Baixar rascunho .eml</button>
+          </div>
+          <pre>{{ accountingResult.emailDraft }}</pre>
+        </div>
+      } @else {
+        <p class="empty">Emita uma NF e gere uma remessa mensal/anual para a contabilidade.</p>
+      }
+
+      <div class="accounting-panels">
+        <form class="settings-form" (ngSubmit)="saveCertificate()">
+          <div>
+            <p class="eyebrow">Empresa e certificado</p>
+            <h3>Certificado A1 local</h3>
+          </div>
+          <label>
+            <span class="field-title">Razao social <span class="help" title="Cadastro local demonstrativo da empresa emissora.">?</span></span>
+            <input name="companyName" [(ngModel)]="certificateForm.companyName" />
+          </label>
+          <label>
+            <span class="field-title">CNPJ da empresa <span class="help" title="Usado apenas no XML local demonstrativo. Nao transmite para SEFAZ.">?</span></span>
+            <input name="companyDocument" [(ngModel)]="certificateForm.companyDocument" />
+          </label>
+          <label>
+            <span class="field-title">UF da empresa <span class="help" title="Ajuda a sugerir CFOP e aliquota estimada por estado.">?</span></span>
+            <select name="companyState" [(ngModel)]="certificateForm.companyState" (change)="onStateChange()">
+              @for (state of states; track state) {
+                <option [value]="state">{{ state }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span class="field-title">Regime tributario <span class="help" title="Altera as opcoes de CSOSN/CST e a estimativa local de impostos.">?</span></span>
+            <select name="taxRegime" [(ngModel)]="certificateForm.taxRegime" (change)="onTaxRegimeChange()">
+              @for (regime of taxRegimes; track regime) {
+                <option [value]="regime">{{ regime }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span class="field-title">Ano do certificado <span class="help" title="Controle local para saber qual certificado A1 esta cadastrado para o ano.">?</span></span>
+            <input name="certificateYear" type="number" [(ngModel)]="certificateForm.certificateYear" />
+          </label>
+          <label>
+            <span class="field-title">Arquivo A1 (.pfx/.p12) <span class="help" title="O app guarda o nome do arquivo para demonstracao. Nao assina XML real.">?</span></span>
+            <input type="file" accept=".pfx,.p12" (change)="onCertificateSelected($event)" />
+          </label>
+          <label>
+            <span class="field-title">Nome do arquivo <span class="help" title="Nome do certificado selecionado localmente.">?</span></span>
+            <input name="certificateFileName" [(ngModel)]="certificateForm.certificateFileName" />
+          </label>
+          <label>
+            <span class="field-title">Senha do certificado <span class="help" title="Senha local demonstrativa. Em producao deve ser criptografada e protegida fora do frontend.">?</span></span>
+            <input name="certificatePassword" type="password" [(ngModel)]="certificateForm.password" placeholder="Senha local do A1" />
+          </label>
+          <button class="primary full" type="submit">Salvar certificado</button>
+        </form>
+
+        <form class="settings-form" (ngSubmit)="sendAccountingByPeriod()">
+          <div>
+            <p class="eyebrow">Contabilidade</p>
+            <h3>Remessa por periodo</h3>
+          </div>
+          <label>
+            <span class="field-title">Email da contabilidade <span class="help" title="Destino usado no rascunho .eml gerado localmente.">?</span></span>
+            <input name="periodEmail" [(ngModel)]="accountingPeriod.email" />
+          </label>
+          <label>
+            <span class="field-title">Ano <span class="help" title="Gera remessa de todas as NFs autorizadas/contingencia do ano, ou do mes se selecionado.">?</span></span>
+            <select name="periodYear" [(ngModel)]="accountingPeriod.year">
+              @for (year of years; track year) {
+                <option [value]="year">{{ year }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span class="field-title">Mes <span class="help" title="Use Todos para remessa anual; escolha um mes para remessa mensal.">?</span></span>
+            <select name="periodMonth" [(ngModel)]="accountingPeriod.month">
+              @for (month of months; track month.value) {
+                <option [value]="month.value">{{ month.label }}</option>
+              }
+            </select>
+          </label>
+          <button class="primary full" type="submit">Gerar XML do periodo</button>
+        </form>
+      </div>
+    </section>
+  }
+
+  @if (productModalOpen) {
+    <section class="modal-backdrop">
+      <div class="large-modal">
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow">Produto</p>
+            <h2>{{ editingProduct ? 'Editar produto' : 'Novo produto' }}</h2>
+          </div>
+          <button class="icon-button" type="button" (click)="closeProductModal()">x</button>
+        </header>
+
+        <div class="modal-tabs">
+          <section class="photo-drop" (drop)="onPhotoDrop($event)" (dragover)="allowDrop($event)">
+            <strong>Adicionar por foto <span class="help dark" title="A foto fica salva no cadastro local do produto e aparece na lista de produtos.">?</span></strong>
+            <span>Arraste uma imagem do Explorer ou selecione um arquivo. O sistema tenta OCR e leitura visual local.</span>
+            <input type="file" accept="image/*" (change)="onPhotoSelected($event)" />
+            @if (readingPhoto) {
+              <small>Lendo imagem com OCR local...</small>
+            }
+            @if (photoPreviewUrl) {
+              <img [src]="photoPreviewUrl" alt="Preview do produto" />
+              <small>{{ photoSuggestion }}</small>
+              <button class="ghost danger" type="button" (click)="clearProductPhoto()">Remover foto</button>
+            }
+            <label class="lookup-field">
+              <span class="field-title">Corrigir identificacao <span class="help" title="Digite poucas palavras do produto para buscar NCM, tipo, perfil e tributacao no catalogo local.">?</span></span>
+              <input
+                name="productLookupText"
+                [(ngModel)]="productLookupText"
+                (ngModelChange)="onProductLookupChange()"
+                placeholder="Ex.: antena, carrinho, capacete"
+              />
+            </label>
+            <button class="secondary" type="button" (click)="fillProductFromLookup()">Preencher pelo catalogo</button>
+            @if (productLookupMatches.length > 0) {
+              <div class="lookup-results">
+                @for (match of productLookupMatches; track match.suggestion.ncm) {
+                  <button type="button" (click)="applyProductLookupMatch(match)">
+                    <strong>{{ match.suggestion.description }}</strong>
+                    <span>{{ match.suggestion.ncm }} | {{ match.suggestion.cfop }} | {{ match.suggestion.csosn }}</span>
+                  </button>
+                }
+              </div>
+            }
+          </section>
+
+          <form class="product-form clean" (keydown.enter)="$event.preventDefault()">
+            <label>
+              <span class="field-title">Codigo automatico * <span class="help" title="Codigo interno do produto. Em novo cadastro pode ser gerado automaticamente pela foto.">?</span></span>
+              <input name="code" [(ngModel)]="productForm.code" [disabled]="editingProduct" required />
+            </label>
+            <label>
+              <span class="field-title">Nome do produto * <span class="help" title="Digite o nome para escolher NCM automaticamente. Ex.: caderno, shampoo, carregador, mochila.">?</span></span>
+              <input name="description" [(ngModel)]="productForm.description" (ngModelChange)="onProductNameChange()" required />
+            </label>
+            <label class="full">
+              <span class="field-title">Detalhamento do produto opcional <span class="help" title="Use para marca, modelo, material, tamanho ou texto lido da embalagem. Ajuda na busca do NCM.">?</span></span>
+              <textarea name="packagingDescription" rows="3" [(ngModel)]="productForm.packagingDescription" (ngModelChange)="onProductNameChange()"></textarea>
+            </label>
+            @if (ncmLookupCandidates.length > 0) {
+              <div class="ncm-results full">
+                <strong>NCM sugerido pelo nome</strong>
+                @for (candidate of ncmLookupCandidates; track candidate.entry.code) {
+                  <button type="button" (click)="applyNcmCandidate(candidate)">
+                    <span>{{ candidate.entry.code }}</span>
+                    <small>{{ candidate.entry.description }}</small>
+                  </button>
+                }
+              </div>
+            }
+            <label>
+              <span class="field-title">Quantidade * <span class="help" title="Quantidade atual em estoque. Deve ser maior que zero para novo produto.">?</span></span>
+              <input name="balance" type="number" min="1" [(ngModel)]="productForm.balance" required />
+            </label>
+            <label>
+              <span class="field-title">Valor comprado <span class="help" title="Custo unitario de compra. Entra no patrimonio por compra e na precificacao.">?</span></span>
+              <input name="purchasePrice" inputmode="decimal" placeholder="R$ 0,00" [(ngModel)]="productForm.purchasePrice" (blur)="onProductMoneyBlur('purchasePrice')" />
+            </label>
+            <label>
+              <span class="field-title">Valor de venda * <span class="help" title="Preco unitario usado na NF e no patrimonio por venda.">?</span></span>
+              <input name="salePrice" inputmode="decimal" placeholder="R$ 0,00" [(ngModel)]="productForm.salePrice" (blur)="onProductMoneyBlur('salePrice')" required />
+            </label>
+
+            <details class="auto-result full" open>
+              <summary>Classificacao fiscal preenchida automaticamente</summary>
+              <div class="auto-grid">
+                <label>
+                  <span class="field-title">NCM * <span class="help" title="Obrigatorio. Digite nome do produto para sugerir NCM, ou escolha uma sugestao.">?</span></span>
+                  <input name="ncm" [(ngModel)]="productForm.ncm" (ngModelChange)="onNcmChange()" placeholder="0000.00.00" required />
+                </label>
+                <label>
+                  <span class="field-title">CFOP * <span class="help" title="5102 para venda dentro do estado; 6102 para venda fora do estado, sugerido automaticamente pela UF.">?</span></span>
+                  <input name="cfop" [(ngModel)]="productForm.cfop" placeholder="5102" required />
+                </label>
+                <label>
+                  <span class="field-title">CSOSN/CST * <span class="help" title="As opcoes mudam conforme o regime tributario salvo na aba Contabilidade.">?</span></span>
+                  <select name="csosn" [(ngModel)]="productForm.csosn" required>
+                    @for (code of fiscalCodeOptions(); track code) {
+                      <option [value]="code">{{ code }}</option>
+                    }
+                  </select>
+                </label>
+                <label>
+                  <span class="field-title">Tipo do produto <span class="help" title="Preenchido pela sugestao fiscal; ajuda na leitura e organizacao do estoque.">?</span></span>
+                  <input name="productType" [(ngModel)]="productForm.productType" />
+                </label>
+                <label>
+                  <span class="field-title">Tributacao % <span class="help" title="Estimativa local baseada no NCM, UF e regime. Ajuste manualmente se o contador orientar.">?</span></span>
+                  <input name="taxRate" type="number" min="0" step="0.01" [(ngModel)]="productForm.taxRate" />
+                </label>
+                <label>
+                  <span class="field-title">Perfil tributario <span class="help" title="Resumo textual da classificacao fiscal usada para justificar a sugestao.">?</span></span>
+                  <input name="taxProfile" [(ngModel)]="productForm.taxProfile" />
+                </label>
+                <label>
+                  <span class="field-title">Unidade <span class="help" title="Unidade comercial. Ex.: UN, CX, KG, LT.">?</span></span>
+                  <input name="unit" [(ngModel)]="productForm.unit" />
+                </label>
+                <label>
+                  <span class="field-title">Origem <span class="help" title="Informe se o produto e nacional ou importado para melhorar a leitura fiscal.">?</span></span>
+                  <select name="origin" [(ngModel)]="productForm.origin">
+                    <option>Nacional</option>
+                    <option>Importado</option>
+                  </select>
+                </label>
+              </div>
+            </details>
+            <label class="check">
+              <input name="active" type="checkbox" [(ngModel)]="productForm.active" />
+              <span class="field-title">Produto ativo <span class="help" title="Produtos inativos continuam no cadastro, mas podem ser tratados como fora de linha.">?</span></span>
+            </label>
+            <button class="primary full" type="button" (click)="saveProduct()" [disabled]="savingProduct || !canSaveProduct()">
+              {{ savingProduct ? 'Salvando...' : 'Salvar produto' }}
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+  }
+
+  @if (selectedInvoice) {
+    <section class="modal-backdrop">
+      <div class="invoice-paper">
+        <header class="invoice-header">
+          <div>
+            <p class="eyebrow">Nota Fiscal</p>
+            <h2>NF #{{ selectedInvoice.number }}</h2>
+          </div>
+          <button class="icon-button" type="button" (click)="closeInvoicePreview()">x</button>
+        </header>
+
+        <div class="invoice-meta">
+          <div><span>Status</span><strong>{{ selectedInvoice.status }}</strong></div>
+          <div><span>Numero</span><strong>{{ selectedInvoice.number }}</strong></div>
+          <div><span>Cliente</span><strong>{{ selectedInvoice.customerName }}</strong></div>
+          <div><span>Documento</span><strong>{{ selectedInvoice.customerDocument || '-' }}</strong></div>
+          <div><span>UF cliente</span><strong>{{ selectedInvoice.customerState || '-' }}</strong></div>
+          <div><span>Email contabilidade</span><strong>{{ selectedInvoice.accountingEmail || '-' }}</strong></div>
+          <div><span>Periodo</span><strong>{{ selectedInvoice.issueMonth }}/{{ selectedInvoice.issueYear }}</strong></div>
+          <div><span>Produtos</span><strong>{{ selectedInvoice.totalSale | currency:'BRL':'symbol':'1.2-2' }}</strong></div>
+          <div><span>Tributos</span><strong>{{ selectedInvoice.totalTax | currency:'BRL':'symbol':'1.2-2' }}</strong></div>
+          <div><span>Pagamento</span><strong>{{ selectedInvoice.paymentMethod }} - {{ selectedInvoice.paymentStatus }}</strong></div>
+          <div><span>Valor pago</span><strong>{{ selectedInvoice.amountPaid | currency:'BRL':'symbol':'1.2-2' }}</strong></div>
+          <div><span>Vencimento</span><strong>{{ selectedInvoice.dueDate || '-' }}</strong></div>
+          <div><span>Itens</span><strong>{{ invoiceTotalItems(selectedInvoice) }}</strong></div>
+        </div>
+
+        <table class="invoice-items-table">
+          <thead>
+            <tr>
+              <th>Codigo</th>
+              <th>Descricao</th>
+              <th>NCM</th>
+              <th class="number">Qtd</th>
+              <th class="number">Valor</th>
+              <th class="number">Tributo</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of selectedInvoice.items; track trackInvoiceItem($index, item)) {
+              <tr>
+                <td>{{ item.productCode }}</td>
+                <td>{{ item.description }}</td>
+                <td>{{ item.ncm }}</td>
+                <td class="number">{{ item.quantity }}</td>
+                <td class="number">{{ item.totalValue | currency:'BRL':'symbol':'1.2-2' }}</td>
+                <td class="number">{{ item.taxValue | currency:'BRL':'symbol':'1.2-2' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+
+        @if (selectedInvoice.xmlContent) {
+          <pre class="xml-box">{{ selectedInvoice.xmlContent }}</pre>
+        }
+
+        <footer class="invoice-footer">
+          <input name="cancelReason" [(ngModel)]="cancelReason" placeholder="Motivo de cancelamento" />
+          <button class="print-button" type="button" (click)="issueInvoice(selectedInvoice)" [disabled]="selectedInvoice.status !== 'Aberta' || processingInvoiceId === selectedInvoice.id">Autorizar NF</button>
+          <button class="secondary" type="button" (click)="downloadXml(selectedInvoice)" [disabled]="selectedInvoice.status === 'Aberta'">XML</button>
+          <button class="secondary" type="button" (click)="markContingency(selectedInvoice)" [disabled]="selectedInvoice.status !== 'Aberta' && selectedInvoice.status !== 'Autorizada'">Contingencia</button>
+          <button class="secondary" type="button" (click)="sendAccounting(selectedInvoice)" [disabled]="selectedInvoice.status !== 'Autorizada' && selectedInvoice.status !== 'Contingencia' && selectedInvoice.status !== 'EnviadaContabilidade'">Contabilidade</button>
+          <button class="ghost danger" type="button" (click)="cancelInvoice(selectedInvoice)" [disabled]="selectedInvoice.status === 'Cancelada' || selectedInvoice.status === 'Inutilizada' || selectedInvoice.status === 'EnviadaContabilidade'">Cancelar</button>
+          <button class="ghost danger" type="button" (click)="voidInvoice(selectedInvoice)" [disabled]="selectedInvoice.status !== 'Aberta' && selectedInvoice.status !== 'Cancelada'">Inutilizar</button>
+        </footer>
+      </div>
+    </section>
+  }
+</main>
